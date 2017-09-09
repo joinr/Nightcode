@@ -15,7 +15,7 @@
            [javafx.beans.value ChangeListener]
            [javafx.event EventHandler]
            [nightcode.utils Bridge]))
-
+;;possible problem here.
 (defn pipe-into-console! [^WebEngine engine in-pipe]
   (let [ca (char-array 256)]
     (.start
@@ -72,6 +72,7 @@
   (when-let [process (get-in runtime-state [:processes project-path])]
     (proc/stop-process! process)))
 
+(def err-out *out*)
 (defn init-console! [project-path runtime-state-atom webview pipes web-port cb]
   (doto webview
     (.setVisible true)
@@ -88,9 +89,12 @@
                          (onautosave [])
                          (onchange [])
                          (onenter [text]
-                           (doto (:out-pipe pipes)
-                             (.write text)
-                             (.flush))))]
+                           (do (binding [*out* err-out] ;;pre-emptively debug repl output
+                                  (println [:repl-is-getting! text]))
+                               (doto (:out-pipe pipes)
+                                 (.write text)
+                                 (.flush))))
+                         )]
             ; prevent bridge from being GC'ed
             (swap! runtime-state-atom update :bridges assoc project-path bridge)
             (-> engine
