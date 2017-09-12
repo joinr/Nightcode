@@ -10,6 +10,7 @@
             [nightcode.utils :as utils]
             [seesaw.color :as color]
             [seesaw.core :as s]
+            [seesaw.chooser :as chooser]
             [mistakes-were-made.core :as mwm]
             [cross-parinfer.core :as cp])
   (:import [java.awt.event KeyEvent KeyListener MouseListener]
@@ -111,8 +112,18 @@
                     (ui/update-project-tree! (.getDescription e))))))
     (shortcuts/toggle-hint! @tabs @shortcuts/down?)))
 
-; button bar actions
+;;added from nightedit
+(defn open-file!
+  [_]
+  ; show a dialog to get a file
+  (when-let [f (chooser/choose-file :type :open)]
+    ; the binding allows you to remove and/or rearrange widgets
+    #_(binding [editors/*widgets* [:save :undo :redo :font-dec :font-inc
+                                 :find :replace :close]]
+      ; resetting this atom is all you need to do to open the file
+      (reset! ui/tree-selection (.getCanonicalPath f))))) ;)
 
+; button bar actions
 (defn update-buttons!
   [editor ^TextEditorPane text-area]
   (when (ui/config! editor :#save :enabled? (.isDirty text-area))
@@ -267,28 +278,30 @@
     {:cursor-position pos
      :text text}))
 
+(def parinfer (atom true))
 (defn add-parinfer
   [^TextEditorPane text-area mode-type state]
-  (let [{:keys [cursor-position text]} state
-        [start-pos end-pos] cursor-position
-        selected? (not= start-pos end-pos)
-        parent-pane (some-> text-area .getParent .getParent)
-        start-position (if (instance? JConsole parent-pane)
-                         (.getCommandStart parent-pane)
-                         0)
-        [col row] (if selected?
-                    [0 0]
-                    [(.getCaretOffsetFromLineStart text-area)
-                     (.getCaretLineNumber text-area)])
-        first-half (subs text 0 start-position)
-        second-half (subs text start-position)
-        cleared-text (str (str/replace first-half #"[^\r^\n]" " ") second-half)
-        result (cp/mode mode-type cleared-text col row)
-        new-text (str first-half (subs (:text result) start-position))]
-    (if selected?
-      (assoc state :text new-text)
-      (let [pos (cp/row-col->position new-text row (:x result))]
-        (assoc state :text new-text :cursor-position [pos pos])))))
+  (if-not @parinfer state
+    (let [{:keys [cursor-position text]} state
+          [start-pos end-pos] cursor-position
+          selected? (not= start-pos end-pos)
+          parent-pane (some-> text-area .getParent .getParent)
+          start-position (if (instance? JConsole parent-pane)
+                           (.getCommandStart parent-pane)
+                           0)
+          [col row] (if selected?
+                      [0 0]
+                      [(.getCaretOffsetFromLineStart text-area)
+                       (.getCaretLineNumber text-area)])
+          first-half (subs text 0 start-position)
+          second-half (subs text start-position)
+          cleared-text (str (str/replace first-half #"[^\r^\n]" " ") second-half)
+          result (cp/mode mode-type cleared-text col row)
+          new-text (str first-half (subs (:text result) start-position))]
+      (if selected?
+        (assoc state :text new-text)
+        (let [pos (cp/row-col->position new-text row (:x result))]
+          (assoc state :text new-text :cursor-position [pos pos]))))))
 
 (defn refresh-content!
   [^TextEditorPane text-area state]
@@ -459,11 +472,18 @@
   true)
 
 (def ^:dynamic *widgets* [:up :save :undo :redo :font-dec :font-inc
-                          :find :replace :close])
+                          :find :replace :close :parinfer :open])
+
+#_(defn create-menubar
+  []
+  (let [open-menu-item (s/menu-item :text "Open" :listen [:action open-file!])
+        file-menu (s/menu :text "File" :items [open-menu-item])]
+    (s/menubar :items [file-menu])))
 
 (defn create-actions
   []
   {:up file-browser/go-up!
+   :open-file open-file!
    :save save-file!
    :undo undo-file!
    :redo redo-file!
@@ -504,7 +524,16 @@
    :close (doto (s/button :id :close
                           :text "X"
                           :listen [:action (:close actions)])
-            (utils/set-accessible-name! :close))})
+            (utils/set-accessible-name! :close))
+   :parinfer (s/toggle :id :toggle-parinfer
+                       :text   "Toggle Parinfer"
+                       :mnemonic \P
+                       :selected? true
+                       :listen [:action (fn [& _] (reset! parinfer (not @parinfer)))])
+   :open   (doto (s/button :id :open
+                           :text "Open..."
+                           :listen [:action (:open-file actions)])
+             (utils/set-accessible-name! :open))})
 
 (defmulti create-editor (fn [type _] type) :default nil)
 
