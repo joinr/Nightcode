@@ -136,40 +136,46 @@
                      :request-exit request-exit
                      ))
 
-(defn interrupt-test []
-  (let [stop  (atom nil)
-        _     (s/show! (s/frame :content
-                         (s/button :text "interrupt!"
-                                   :listen [:action (fn [& _]
-                                                      (reset! stop true))])))]
-    (repl :interrupt stop)))
+(defmacro echo-form [expr]
+  (do (pprint/pprint expr)
+      `~expr))  
 
-(defmacro echo-form [& xs]
-  `(do (pprint ~@xs)
-  )
-  
-  
+;;console handle [maybe bad to hold onto state...]
+(def repl-console (atom nil))
+
+;;programmatic repl api
 (defn send-repl [console form]  (.enterLine console (str form)))
 (defn kill-repl [console]       (send-repl console :clj/exit))
+(defn clear-repl [console]
+  (.setText (.getTextArea console) "")
+  (send-repl console ""))
+
+(defn send-repl!  [form] (send-repl @repl-console form))
+(defn kill-repl!  []     (kill-repl @repl-console))
+(defn clear-repl! []     (clear-repl @repl-console))
+ 
 
 (defn create-pane
   "Returns the pane with the REPL."
   [console & {:keys [init interrupt]}]
-  (let [interrupt  (or interrupt (atom nil))
+  (let [_          (reset! repl-console console)
+        start!     (fn []
+                     (lein/start-thread! (ui/get-io! console)
+                                         (binding [*ns* *ns*]
+                                           (repl :interrupt interrupt :init init))))
+        interrupt  (or interrupt (atom nil))
         reset-repl (fn [& _]
                      (try (kill-repl console)
                           (catch Exception e nil))
                      (.setText (.getTextArea console) "")
-                     (lein/start-thread! (ui/get-io! console)
-                                         (repl :interrupt interrupt :init init))
-                     (s/request-focus! (-> console .getViewport .getView)))            run!    (fn [& _]
+                     (start!)
+                     (s/request-focus! (-> console .getViewport .getView)))
+        run!    (fn [& _]
                      (.setText (.getTextArea console) "")
-                     (lein/start-thread! (ui/get-io! console)
-                                         (repl :interrupt interrupt :init init))
+                     (start!)
                      (s/request-focus! (-> console .getViewport .getView)))
         clear! (fn [& _]
-                 (.setText (.getTextArea console) "")
-                 (send-repl console "")
+                 (clear-repl console)
                  (s/request-focus! (-> console .getViewport .getView)))
         widget-bar (ui/wrap-panel :items
                     [(s/button :text "reset" :mnemonic \I
@@ -193,3 +199,14 @@
       (shortcuts/create-mappings! pane {:repl-console run!}))
     ; return the repl pane
     pane))
+
+
+(comment
+(defn interrupt-test []
+  (let [stop  (atom nil)
+        _     (s/show! (s/frame :content
+                         (s/button :text "interrupt!"
+                                   :listen [:action (fn [& _]
+                                                      (reset! stop true))])))]
+    (repl :interrupt stop)))
+  )
