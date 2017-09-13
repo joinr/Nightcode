@@ -110,31 +110,44 @@
          (recur))))))
 (in-ns 'nightcode.repl)
 
+
+(def  active-threads (atom nil))
+
 ;;Creates a repl that can be interrupted by using a sentinel atom.
 ;;Computations are evaluated in a future; if the eval is not complete
 ;;and the atom has reset to truthy, we cancel evaluation.  Otherwise
 ;;poll ever 50ms.
 (defn ->interruptable [interrupted]
-  (fn maybe-eval [arg]
-    (let [res (future (eval arg))]
-      (loop []
-        (cond @interrupted
-                (do (future-cancel res)
-                    (reset! interrupted nil)
-                    (println "Thread Death: Evalution Interrupted!"))
-                (realized? res) @res
-              :else (do (Thread/sleep 50)
-                        (recur)))))))
-
+  (let [common-setters '#{ns in-ns set!}]                        
+    (fn maybe-eval [arg]
+      (if (and (coll? arg) (common-setters (first arg)))
+        (eval arg)                 
+        (let [binds (when (and (coll? arg)
+                             (= (first arg) 'binding))
+                      (second arg))              
+              res  (if binds
+                     (let [[_ binds & body] arg]
+                       (eval `(binding [~@binds]
+                                (future ~@body))))
+                      (future (eval arg)))]
+          (loop []
+            (cond @interrupted
+                  (do (future-cancel res)
+                      (reset! interrupted nil)
+                      (println "Thread Death: Evalution Interrupted!"))
+                  (realized? res) @res
+                  :else (do (Thread/sleep 100)
+                            (recur)))))))))
 ;;API for creating our interruptable repl.
 (defn repl [& {:keys [interrupt init request-exit]
                :or {request-exit :clj/exit}}]
-  (clojure.main/repl :eval (if interrupt (->interruptable interrupt)
-                               eval)
-                     :init (fn []);(or init #())
-                     ;:caught repl-caught
-                     :request-exit request-exit
-                     ))
+  (binding [*ns* *ns*]
+    (clojure.main/repl :eval (if interrupt (->interruptable interrupt)
+                                 eval)
+                       :init (fn []);(or init #())
+                                        ;:caught repl-caught
+                       :request-exit request-exit
+                       )))
 
 (defmacro echo-form [expr]
   (do (pprint/pprint expr)
@@ -153,16 +166,46 @@
 (defn send-repl!  [form] (send-repl @repl-console form))
 (defn kill-repl!  []     (kill-repl @repl-console))
 (defn clear-repl! []     (clear-repl @repl-console))
- 
 
+;;pulled from joinr/swingrepl fork
+(defmacro eval-repl 
+   "Convenience macro.  Allows us to evaluate arbitrary expressions in  
+    the repl.  Provides the string conversion for us." 
+   [rpl & body] 
+  `(send-repl! ~rpl 
+               ~(str (first body))))
+
+(defn redirect-io
+  [[in out] func]
+  (binding [*out* out
+            *err* out
+            *in* in
+            leiningen.core.main/*exit-process?* false]
+    (func)))
+
+(defn start-thread!*
+  [in-out func]
+  (->> (bound-fn []
+         (try (func)
+           (catch Exception e (some-> (.getMessage e) println))
+           (finally (println "\n===" (utils/get-string :finished) "==="))))
+       (redirect-io in-out)
+       (bound-fn [])
+       Thread.
+       .start))
+
+ 
 (defn create-pane
   "Returns the pane with the REPL."
   [console & {:keys [init interrupt]}]
   (let [_          (reset! repl-console console)
         start!     (fn []
-                     (lein/start-thread! (ui/get-io! console)
-                                         (binding [*ns* *ns*]
-                                           (repl :interrupt interrupt :init init))))
+                     #_(lein/start-thread! (ui/get-io! console)                                         
+                                           (repl :interrupt interrupt :init init))
+                     (start-thread!* (ui/get-io! console)
+                                     (binding [*ns* *ns*]
+                                          (bound-fn []
+                                            (repl :interrupt interrupt :init init)))))
         interrupt  (or interrupt (atom nil))
         reset-repl (fn [& _]
                      (try (kill-repl console)
@@ -208,5 +251,5 @@
                          (s/button :text "interrupt!"
                                    :listen [:action (fn [& _]
                                                       (reset! stop true))])))]
-    (repl :interrupt stop)))
+      (repl :interrupt stop)))
   )
