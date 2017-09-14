@@ -271,17 +271,40 @@
       (.setSelectionEnd text-area end-pos))
     (.setCaretPosition text-area start-pos)))
 
-(defn init-state
-  [^TextEditorPane text-area]
-  (let [pos (get-cursor-position text-area)
-        text (.getText text-area)]
-    {:cursor-position pos
-     :text text}))
-
+;;dynamically enable/disable parinfer behavior.
 (def parinfer (atom true))
+(def copy-literal (atom true))
+
+;;allow communicating extra state regarding
+;;things like copy/paste actions...
+(defn init-state
+  ([^TextEditorPane text-area]
+   (let [pos (get-cursor-position text-area)
+         text (.getText text-area)]
+     {:cursor-position pos
+      :text text
+      :parinfer @parinfer
+      :copy-literal @copy-literal})))
+           
+ ;;allows us to record copy and paste actions.
+(defn copy-paste-action [e state]
+  (let [k (case (.getKeyCode e) 86 :paste ;KeyEvent/VK_V paste
+                88 :cut
+                67 :copy                     
+                nil)]
+    (if k (assoc state k  true)
+        state)))
+
+(defn should-parinfer? [state]
+  (and (:parinfer state) ;;we are toggled on
+       (if (or (:cut state) (:copy state)) ;;if cut/copy
+         (not (:copy-literal state)) ;;we're not set to copy literally.
+         true ;otherwise go!
+         )))
+
 (defn add-parinfer
   [^TextEditorPane text-area mode-type state]
-  (if-not @parinfer state
+  (if-not (should-parinfer? state) state
     (let [{:keys [cursor-position text]} state
           [start-pos end-pos] cursor-position
           selected? (not= start-pos end-pos)
@@ -353,10 +376,12 @@
                        (add-parinfer text-area :indent state))
                      (refresh-content! text-area)
                      (mwm/update-edit-history! edit-history)))
-              
+              ;;cutting/pasting behavior
+              ;;we want this to respect copy-literal now...              
               (and (or (.isControlDown e) (.isMetaDown e))
                    (contains? #{KeyEvent/VK_V KeyEvent/VK_X} (.getKeyCode e)))
               (->> (init-state text-area)
+                   (copy-paste-action (.getKeyCode e))
                    (add-parinfer text-area :both)
                    (refresh-content! text-area)
                    (mwm/update-edit-history! edit-history))))
@@ -369,7 +394,7 @@
         (reify MouseListener
           (mouseClicked [this e] nil)
           (mouseEntered [this e] nil)
-          (mouseExited [this e] nil)
+          (mouseExited  [this e] nil)
           (mousePressed [this e] nil)
           (mouseReleased [this e]
             (mwm/update-cursor-position! edit-history (get-cursor-position text-area))))))
@@ -472,13 +497,7 @@
   true)
 
 (def ^:dynamic *widgets* [:up :save :undo :redo :font-dec :font-inc
-                          :find :replace :close :parinfer :open])
-
-#_(defn create-menubar
-  []
-  (let [open-menu-item (s/menu-item :text "Open" :listen [:action open-file!])
-        file-menu (s/menu :text "File" :items [open-menu-item])]
-    (s/menubar :items [file-menu])))
+                          :find :replace :close :parinfer #_:open :load-in-repl :eval-selection])
 
 (defn create-actions
   []
@@ -492,6 +511,19 @@
    :find focus-on-find!
    :replace focus-on-replace!
    :close close-selected-editor!})
+
+;;Temporary hack to enable decoupled comms
+;;between editors and external functions like
+;;repl evaluation...Better solution would be to
+;;have an event pump that widgets participate in
+;;via subscriptions.
+(def dynamic-handlers (atom {}))
+(defn dynamic-handler [k]
+  (fn [e]
+    (when-let [f (get @dynamic-handlers k)]
+      (f e))))
+(defn set-handler [k f]
+  (swap! dynamic-handlers assoc k f))
 
 (defn create-widgets
   [actions]
@@ -530,6 +562,14 @@
                        :mnemonic \P
                        :selected? true
                        :listen [:action (fn [& _] (reset! parinfer (not @parinfer)))])
+   :eval-selection (s/button :id :eval-selection
+                             :text "evaluate selection"
+                             :mnemonic \E
+                             :listen [:action (dynamic-handler :eval-selection)])
+   :load-in-repl   (s/button :id :load-in-repl
+                             :text "load in repl"
+                             :mnemonic \L
+                             :listen [:action (dynamic-handler :load-in-repl)])
    :open   (doto (s/button :id :open
                            :text "Open..."
                            :listen [:action (:open-file actions)])

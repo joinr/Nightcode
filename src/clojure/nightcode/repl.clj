@@ -118,7 +118,7 @@
 ;;and the atom has reset to truthy, we cancel evaluation.  Otherwise
 ;;poll ever 50ms.
 (defn ->interruptable [interrupted]
-  (let [common-setters '#{ns in-ns set!}]                        
+  (let [common-setters '#{ns in-ns set! load load-file}]
     (fn maybe-eval [arg]
       (if (and (coll? arg) (common-setters (first arg)))
         (eval arg)                 
@@ -151,24 +151,69 @@
 
 (defmacro echo-form [expr]
   (do (pprint/pprint expr)
-      `~expr))  
+      `~expr))
 
 ;;console handle [maybe bad to hold onto state...]
 (def repl-console (atom nil))
 
 ;;programmatic repl api
-(defn send-repl [console form]  (.enterLine console (str form)))
-(defn kill-repl [console]       (send-repl console :clj/exit))
-(defn clear-repl [console]
+(defn send-repl  [^nightcode.ui.JConsole console form]
+  (.enterLine console (str form)))
+(defn kill-repl  [console]       (send-repl console :clj/exit))
+(defn clear-repl [^nightcode.ui.JConsole console]
   (.setText (.getTextArea console) "")
   (send-repl console ""))
 
 (defn send-repl!  [form] (send-repl @repl-console form))
+(defn print-repl!  [msg] 
+  (.print @repl-console  (str msg)))
+(defn println-repl!  [msg] 
+  (.print @repl-console  (str msg "\n")))
+
+(defn print-comments! [msg]
+  (.print @repl-console  "\n")
+  (println-repl! msg))
+
 (defn kill-repl!  []     (kill-repl @repl-console))
 (defn clear-repl! []     (clear-repl @repl-console))
+(defn echo-repl!  [form]
+  (let [input (str form)]
+    (doto ^nightcode.ui.JConsole @repl-console
+      (.print  (str input "\n"))
+      (.enterLine input))))
+
+(defn type-string [^nightcode.ui.JConsole
+                   console input & {:keys [skip? speed]
+                             :or {skip? (fn [] false)
+                                  speed 64}}]
+  (if (or (nil? speed) (zero? speed))
+    (.print console (str input "\n"))
+    (let [n (count input)]
+      (loop [idx 0]
+        (if (== idx n)
+          (.print console "\n")
+          (if-not (skip?)
+            (do (.print console (nth input idx))
+                (Thread/sleep speed)
+                (recur (unchecked-inc idx)))
+            (.print console (str (subs input idx) "\n"))))))))
+
+(defn type-string! [input & opts]
+  (apply type-string @repl-console opts))
+                   
+(defn type-repl!  [form & {:keys [speed] :or [speed 64]}]
+  (let [input (str form)]
+    (doto  @repl-console
+      (type-string input :speed speed)
+      (.enterLine input))))
+
+;;send a series of forms to the repl...
+;;comments will be elided...
+(defn repl-tutorial! [forms & {:keys [speed] :or [speed 64]}]
+  )
 
 ;;pulled from joinr/swingrepl fork
-(defmacro eval-repl 
+#_(defmacro eval-repl 
    "Convenience macro.  Allows us to evaluate arbitrary expressions in  
     the repl.  Provides the string conversion for us." 
    [rpl & body] 
@@ -183,6 +228,7 @@
             leiningen.core.main/*exit-process?* false]
     (func)))
 
+;;may be unncessary...
 (defn start-thread!*
   [in-out func]
   (->> (bound-fn []
