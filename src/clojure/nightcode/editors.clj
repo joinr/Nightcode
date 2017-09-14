@@ -682,8 +682,14 @@
              ; remove any editors that aren't valid anymore
              (remove-editors! nil)
              ; show the selected editor
-             (show-editor! path)))
+             (show-editor! path)
+             ;;necessary hack to get linenumbers correct
+             (reset! font-size @font-size)))
 (add-watch font-size
            :save-font-size
            (fn [_ _ _ x]
              (save-font-size! x)))
+(add-watch font-size
+           :tooltips
+           (fn [_ _ _ x]
+             (reset! completions/completion-font-size (* 0.5 x))))

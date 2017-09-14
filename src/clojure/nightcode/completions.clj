@@ -16,6 +16,25 @@
                               KeyEvent/VK_DOWN
                               KeyEvent/VK_ESCAPE})
 
+(def ^:constant +default-font-size+ 11)
+(def completion-font-size (atom +default-font-size+))
+(def default-proportions {:choices [(/ 300 +default-font-size+)
+                                    (/ 300 +default-font-size+)]
+                          :desc    [(/ 600 +default-font-size+)
+                                    (/ 300 +default-font-size+)]})
+(def choice-window-size   (atom [300 300]))
+(def desc-window-size     (atom [600 300]))
+#_(add-watch completion-font-size :choices
+           (fn [_ _ _ new]
+             (let [[w h] (:choices default-proportions)]
+               (reset! choice-window-size [(int (* w new))
+                                           (int (* h new))]))))
+#_(add-watch completion-font-size :desc
+           (fn [_ _ _ new]
+             (let [[w h] (:desc default-proportions)]
+               (reset! desc-window-size [(int (* w new))
+                                         (int (* h new))]))))
+
 (defn allow-symbol?
   [symbol-str ns]
   true)
@@ -31,7 +50,7 @@
 
 (defn create-completion
   [provider symbol-str doc-str]
-  (->> (str "<html><body><pre><span style='font-size: 11px;'>"
+  (->> (str "<html><body><pre><span style='font-size:" "4.5vw;'>" #_@completion-font-size #_"px;'>"
             doc-str
             "</span></pre></body></html>")
        (BasicCompletion. provider symbol-str nil)))
@@ -66,14 +85,16 @@
 (defn create-completer
   [text-area extension]
   (when-let [provider (create-completion-provider text-area extension)]
-    (doto (AutoCompletion. provider)
-      (.setShowDescWindow true)
-      (.setAutoCompleteSingleChoices false)
-      (.setAutoCompleteEnabled true)
-      (.setAutoActivationEnabled false)
-      (.setAutoActivationDelay 200)
-      (.setChoicesWindowSize 150 300)
-      (.setDescriptionWindowSize 600 300))))
+    (let [[cw ch] @choice-window-size
+          [dw dh] @desc-window-size]
+      (doto (AutoCompletion. provider)
+        (.setShowDescWindow true)
+        (.setAutoCompleteSingleChoices false)
+        (.setAutoCompleteEnabled true)
+        (.setAutoActivationEnabled false)
+        (.setAutoActivationDelay 200)
+        (.setChoicesWindowSize (int cw) (int ch) #_150 #_300)
+        (.setDescriptionWindowSize (int dw) (int dh) #_600 #_300)))))
 
 (defn install-completer!
   [text-area completer]
