@@ -9,6 +9,7 @@
            [org.fife.ui.autocomplete
             AutoCompletion BasicCompletion DefaultCompletionProvider]))
 
+;;Note: autocomplete pops up on control-space...
 (def ^:dynamic *namespaces* ['clojure.core])
 (def ^:const completer-keys #{KeyEvent/VK_ENTER
                               KeyEvent/VK_UP
@@ -82,8 +83,8 @@
   (.addKeyListener text-area
     (reify KeyListener
       (keyReleased [this e] nil)
-      (keyTyped [this e] nil)
-      (keyPressed [this e]
+      (keyTyped    [this e] nil)
+      (keyPressed  [this e]
         (when (and (contains? completer-keys (.getKeyCode e))
                    (some #(.isVisible %) (.getOwnedWindows @ui/root)))
           (let [ks (KeyStroke/getKeyStroke (.getKeyCode e) 0)

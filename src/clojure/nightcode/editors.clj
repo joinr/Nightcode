@@ -156,9 +156,19 @@
     (s/request-focus! text-area)
     (update-buttons! (get-selected-editor) text-area)))
 
+(defn text-area->gutter [ta]
+  (try (some->> ta
+                (.getParent)
+                (.getParent)
+                (.getGutter))
+       (catch Exception e nil)))
+
 (defn set-font-size!
   [text-area size]
   (.setFont text-area (-> text-area .getFont (.deriveFont (float size))))
+  (when-let [g (text-area->gutter text-area)]
+    (.setLineNumberFont g
+      (-> g (.getLineNumberFont) (.deriveFont (float size)))))
   (s/request-focus! text-area))
 
 (defn save-font-size!
@@ -239,7 +249,6 @@
         (update-buttons! editor text-area)))))
 
 ; create and display editors
-
 (defn add-watchers!
   [path text-area]
   (add-watch font-size
@@ -287,17 +296,18 @@
       :copy-literal @copy-literal})))
            
  ;;allows us to record copy and paste actions.
-(defn copy-paste-action [e state]
-  (let [k (case (.getKeyCode e) 86 :paste ;KeyEvent/VK_V paste
-                88 :cut
-                67 :copy                     
-                nil)]
+(defn copy-paste-action [keycode state]
+  (let [k (case keycode
+            86 :paste ;KeyEvent/VK_V paste
+            88 :cut
+            67 :copy                     
+            nil)]
     (if k (assoc state k  true)
         state)))
 
 (defn should-parinfer? [state]
   (and (:parinfer state) ;;we are toggled on
-       (if (or (:cut state) (:copy state)) ;;if cut/copy
+       (if (or (:cut state) (:copy state) (:paste state)) ;;if cut/copy
          (not (:copy-literal state)) ;;we're not set to copy literally.
          true ;otherwise go!
          )))
@@ -583,11 +593,13 @@
   (when (utils/valid-file? (io/file path))
     (let [; create the text editor and the pane that will hold it
           edit-history (create-edit-history)
-          text-area (create-text-area path edit-history)
-          extension (utils/get-extension path)
-          clojure? (contains? utils/clojure-exts extension)
-          completer (completions/create-completer text-area extension)
-          editor-pane (s/border-panel :center (RTextScrollPane. text-area))
+          text-area    (create-text-area path edit-history)
+          extension    (utils/get-extension path)
+          clojure?     (contains? utils/clojure-exts extension)
+          completer    (completions/create-completer text-area extension)
+          ;split out the rtext so we can access the gutter when font size changes.
+          rtext        (RTextScrollPane.   text-area)
+          editor-pane  (s/border-panel :center rtext)
           ; create the actions and widgets
           actions (create-actions)
           widgets (create-widgets actions)
