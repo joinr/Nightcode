@@ -33,13 +33,12 @@
        (if (= "Nimbus" (.getName info))
          (javax.swing.UIManager/setLookAndFeel (.getClassName info))))))
 
-
 (defn set-theme!
   "Sets the theme based on the command line arguments."
   [args]
   (s/native!)
-  (set-nimbus!)
-  #_(let [{:keys [shade skin-object theme-resource]} args]
+  #_(set-nimbus!)
+  (let [{:keys [shade skin-object theme-resource]} args]
     (when theme-resource (reset! ui/theme-resource theme-resource))
     (SubstanceLookAndFeel/setSkin (or skin-object (GraphiteSkin.)))))
 

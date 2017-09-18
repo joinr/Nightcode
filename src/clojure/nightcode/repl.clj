@@ -164,7 +164,10 @@
   (.setText (.getTextArea console) "")
   (send-repl console ""))
 
-(defn send-repl!  [form] (send-repl @repl-console form))
+;;sometimes the repl isn't initialized yet...
+(defn send-repl!  [form]
+  (send-repl @repl-console form))
+
 (defn print-repl!  [msg] 
   (.print @repl-console  (str msg)))
 (defn println-repl!  [msg] 
@@ -182,35 +185,69 @@
       (.print  (str input "\n"))
       (.enterLine input))))
 
+(require '[clojure.core.async :as async])
+(defn chan? [x]
+  (extends? clojure.core.async.impl.protocols/Channel
+            (type x)))
+
+(defn go-sleep [speed]
+  (cond (number? speed)
+        (async/<! (async/timeout speed))
+        (chan? speed) (async/<! speed)
+        :else (throw (Exception.
+                      (str [:cannot-sleep! speed])))))
+
 (defn type-string [^nightcode.ui.JConsole
-                   console input & {:keys [skip? speed]
+                   console input & {:keys [skip? speed sleep-fn]
                              :or {skip? (fn [] false)
                                   speed 64}}]
   (if (or (nil? speed) (zero? speed))
     (.print console (str input "\n"))
-    (let [n (count input)]
-      (loop [idx 0]
-        (if (== idx n)
-          (.print console "\n")
-          (if-not (skip?)
-            (do (.print console (nth input idx))
-                (Thread/sleep speed)
-                (recur (unchecked-inc idx)))
-            (.print console (str (subs input idx) "\n"))))))))
+    (let [sleep-fn (or sleep-fn #(Thread/sleep %))]
+      (let [n (count input)]
+        (loop [idx 0]
+          (if (== idx n)
+            (.print console "\n")
+            (if-not (skip?)
+              (do (.print console (nth input idx))
+                  (sleep-fn speed) 
+                  (recur (unchecked-inc idx)))
+              (.print console (str (subs input idx) "\n")))))))))
 
 (defn type-string! [input & opts]
   (apply type-string @repl-console opts))
                    
-(defn type-repl!  [form & {:keys [speed] :or [speed 64]}]
+(defn type-repl!  [form & {:keys [speed sleep-fn]
+                           :or   [speed 64]}]
   (let [input (str form)]
     (doto  @repl-console
-      (type-string input :speed speed)
+      (type-string input :speed speed :sleep-fn sleep-fn)
       (.enterLine input))))
 
 ;;send a series of forms to the repl...
 ;;comments will be elided...
-(defn repl-tutorial! [forms & {:keys [speed] :or [speed 64]}]
-  )
+(defn repl-tutorial! [forms & {:keys [typing-speed
+                                      reading-speed
+                                      skip
+                                      pause
+                                      cancel]
+                               :or [typing-speed 64
+                                    ]}]
+  (let [pause       (or pause (atom nil))
+        cancel      (or cancel (atom nil))
+        in-chan     (async/chan 1)
+        _           (async/onto-chan in-chan forms)
+        done-chan   (async/chan 1)]
+    (async/go
+      (loop []
+        (when-let [f (async/<! in-chan)]
+          (do (when-not @skip
+                (type-repl! f :speed typing-speed :sleep-fn go-sleep))
+              (some->> reading-speed go-sleep)
+              (if @cancel
+                (async/put! done-chan :finished)
+                (recur))))))
+    done-chan))
 
 ;;pulled from joinr/swingrepl fork
 #_(defmacro eval-repl 
