@@ -6,7 +6,8 @@
             [nightcode.shortcuts :as shortcuts]
             [nightcode.ui :as ui]
             [seesaw.core :as s]
-            [seesaw.icon :as i])
+            [seesaw.icon :as i]
+            [sanersubstance.core :as substance])
   (:import [java.awt Window]
            [java.awt.event WindowAdapter]
            [java.lang.reflect InvocationHandler Proxy]
@@ -40,7 +41,8 @@
   #_(set-nimbus!)
   (let [{:keys [shade skin-object theme-resource]} args]
     (when theme-resource (reset! ui/theme-resource theme-resource))
-    (SubstanceLookAndFeel/setSkin (or skin-object (GraphiteSkin.)))))
+    (SubstanceLookAndFeel/setSkin (or skin-object (GraphiteSkin.)))
+    (substance/enforce-event-dispatch)))
 
 (defn show-shut-down-dialog!
   "Displays a dialog confirming whether the program should shut down."
