@@ -30,7 +30,7 @@
                  [play-clj/lein-template "1.1.0.1"]
                  [seesaw "1.4.5"]
                  [cross-parinfer "1.1.8"]
-                 [sanersubstance "0.1.0-SNAPSHOT"]
+                 [sanersubstance "0.1.0-SNAPSHOT"]]
   :uberjar-exclusions [#"PHPTokenMaker\.class"
                        #"org\/apache\/lucene"]
   :resource-paths ["resources"]
