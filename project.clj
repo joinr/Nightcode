@@ -30,12 +30,11 @@
                  [play-clj/lein-template "1.1.0.1"]
                  [seesaw "1.4.5"]
                  [cross-parinfer "1.1.8"]
-                 [sanersubstance "0.1.0-SNAPSHOT"]]
+                 [sanersubstance "0.1.0-SNAPSHOT"]
+                 [joinr/nightcode-java "0.1.0-SNAPSHOT"]]
   :uberjar-exclusions [#"PHPTokenMaker\.class"
                        #"org\/apache\/lucene"]
   :resource-paths ["resources"]
   :source-paths ["src/clojure"]
-  :java-source-paths ["src/java"]
-  :javac-options ["-target" "1.6" "-source" "1.6" "-Xlint:-options"]
   :aot [clojure.main nightcode.core nightcode.lein]
   :main ^:skip-aot nightcode.Nightcode)
