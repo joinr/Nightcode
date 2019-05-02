@@ -34,16 +34,14 @@
                  [seesaw "1.5.0"]
                  [cross-parinfer "1.5.0"]
                  [sanersubstance "0.1.0-SNAPSHOT"]
+                 [joinr/nightcode-java "0.1.0-SNAPSHOT"]
                  ;;satisfy the build gods.
                  [commons-codec/commons-codec "1.12"]
                  ;;forgot we added a dependency here
-                 [org.clojure/core.async "0.4.490"]
-                 ]
+                 [org.clojure/core.async "0.4.490"]]
   :uberjar-exclusions [#"PHPTokenMaker\.class"
                        #"org\/apache\/lucene"]
   :resource-paths ["resources"]
   :source-paths ["src/clojure"]
-  :java-source-paths ["src/java"]
-  :javac-options ["-target" "1.6" "-source" "1.6" "-Xlint:-options"]
   :aot [clojure.main nightcode.core nightcode.lein]
   :main ^:skip-aot nightcode.Nightcode)
