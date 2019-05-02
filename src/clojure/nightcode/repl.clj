@@ -6,7 +6,8 @@
             [nightcode.ui :as ui]
             [nightcode.utils :as utils]
             [seesaw.core :as s]
-            [clojure.pprint :as pprint])
+            [clojure.pprint :as pprint]
+            [clojure.core.async :as async])
   (:import [clojure.lang LineNumberingPushbackReader]))
 
 (in-ns 'clojure.main)
@@ -185,7 +186,6 @@
       (.print  (str input "\n"))
       (.enterLine input))))
 
-(require '[clojure.core.async :as async])
 (defn chan? [x]
   (extends? clojure.core.async.impl.protocols/Channel
             (type x)))
@@ -218,7 +218,7 @@
   (apply type-string @repl-console opts))
                    
 (defn type-repl!  [form & {:keys [speed sleep-fn]
-                           :or   [speed 64]}]
+                           :or   {speed 64}}]
   (let [input (str form)]
     (doto  @repl-console
       (type-string input :speed speed :sleep-fn sleep-fn)
@@ -231,8 +231,8 @@
                                       skip
                                       pause
                                       cancel]
-                               :or [typing-speed 64
-                                    ]}]
+                               :or {typing-speed 64
+                                    }}]
   (let [pause       (or pause (atom nil))
         cancel      (or cancel (atom nil))
         in-chan     (async/chan 1)
