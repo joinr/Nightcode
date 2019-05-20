@@ -189,6 +189,22 @@
                    :text (utils/get-string :auto-build)
                    :listen [:action (:auto actions)])})
 
+;;dumb atom to keep track of our running processes, and
+;;ensure we shutdown everything like spawned jvms.
+(def processes (atom {}))
+(defn push-process! [k]
+  (if-let [p (get @processes k)]
+    (do (lein/stop-process! p)
+        p)
+    (let [newp (atom nil)]
+      (swap! processes assoc k newp)
+      newp)))
+
+(defn stop-all-processes! []
+  (do (doseq [p (vals @processes)]
+        (lein/stop-process! p))
+      (reset! processes {})))
+
 (defn create-builder
   [path]
   (let [; create console and the pane that will hold it
@@ -196,8 +212,8 @@
         build-pane (s/border-panel
                      :center (s/config! console :id :build-console))
         ; create atoms to hold important values
-        process (atom nil)
-        auto-process (atom nil)
+        process      (push-process! [:process path]) ;(atom nil)
+        auto-process (push-process! [:auto-process path]) ;(atom nil)
         last-reload (atom nil)
         ; create the actions and widgets
         actions (create-actions path console build-pane

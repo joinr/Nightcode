@@ -54,7 +54,7 @@
                  :on-close :nothing)
     ; set various window properties
     window/enable-full-screen!
-    window/add-listener!))
+    (window/add-listener! :on-shutdown builders/stop-all-processes!)))
 
 (defn -main
   "Launches the main window."

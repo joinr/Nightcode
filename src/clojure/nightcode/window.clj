@@ -103,7 +103,7 @@
 
 (defn add-listener!
   "Sets callbacks for window events."
-  [window]
+  [window & {:keys [on-shutdown]}]
   (override-quit-handler!)
   (.addWindowListener window
     (proxy [WindowAdapter] []
@@ -118,4 +118,5 @@
         (git/update-sidebar!))
       (windowClosing [e]
         (when (show-shut-down-dialog!)
-          (System/exit 0))))))
+          (do (when on-shutdown (on-shutdown))
+              (System/exit 0)))))))

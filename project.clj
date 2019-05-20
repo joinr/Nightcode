@@ -12,13 +12,13 @@
                  ;;note: we have to use < 2.8.1 due
                  ;;to some silliness with lein-droid.
                  ;;For minimal changes, I'm okay with this.
-                 [leiningen  "2.7.1"
-                  :exclusions [leiningen.search]]
+                 [leiningen  "2.9.1"]
+                  ;:exclusions [leiningen.search org.clojure/data.xml]]
                  [lein-ancient "0.6.15"
                   :exclusions [clj-aws-s3]]
                  [lein-cljsbuild "1.1.7"]
                  [lein-clr "0.2.2"]
-                 [lein-droid "0.4.6"]
+                 [joinr/lein-droid "0.4.7-SNAPSHOT"]
                  [lein-typed "0.4.6"]
                  [lein-ring "0.12.5"]
                  [mistakes-were-made "1.8.0"]
@@ -38,7 +38,8 @@
                  ;;satisfy the build gods.
                  [commons-codec/commons-codec "1.12"]
                  ;;forgot we added a dependency here
-                 [org.clojure/core.async "0.4.490"]]
+                 [org.clojure/core.async "0.4.490"]
+                 #_[org.clojure/data.xml "0.0.8"]]
   :uberjar-exclusions [#"PHPTokenMaker\.class"
                        #"org\/apache\/lucene"]
   :resource-paths ["resources"]

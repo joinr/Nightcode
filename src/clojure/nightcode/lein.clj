@@ -5,7 +5,7 @@
             [leiningen.clr]
             [leiningen.core.eval]
             [leiningen.core.main]
-            [leiningen.core.project]
+            [leiningen.core.project :as project]
             [leiningen.clean]
             [leiningen.cljsbuild]
             [leiningen.droid]
@@ -29,6 +29,11 @@
 (defonce class-name (str *ns*))
 
 ; utilities
+
+(defn ensure-dynamic-classloader []
+  (try
+    (project/ensure-dynamic-classloader)
+    (catch Exception _)))
 
 (defn java-project-map?
   [project]
@@ -155,12 +160,24 @@
   [in-out & body]
   `(start-thread!* ~in-out (fn [] ~@body)))
 
+(declare stop-process!)
+;;dumb atom to keep track of our running processes, and
+;;ensure we shutdown everything like spawned jvms.
+(def processes (atom {}))
+
+(defn stop-all-processes! []
+  (do (doseq [p (vals @processes)]
+        (stop-process! p))
+      (reset! processes {})))
+
+
 (defn start-process!
   [process path & args]
   (reset! process (.exec (Runtime/getRuntime)
                          (into-array (sandbox/add-dir (flatten args)))
                          (sandbox/get-env)
                          (io/file path)))
+  (swap! processes assoc-in [:lein-process path] process)                            
   (.addShutdownHook (Runtime/getRuntime)
                     (Thread. #(when @process (.destroy @process))))
   (with-open [out (io/reader (.getInputStream @process))
@@ -189,10 +206,14 @@
                     args)))
 
 (defn stop-process!
-  [process]
-  (when @process
-    (.destroy @process))
-  (reset! process nil))
+  [*process]
+  (when-let [p @*process]
+    ;; kill child processes if running on java 9 or later
+    (when (->> Process .getDeclaredMethods seq (some #(= (.getName %) "descendants")))
+      (doseq [child (-> p .descendants .iterator iterator-seq)]
+        (.destroyForcibly child)))
+    (.destroyForcibly p))
+  (reset! *process nil))
 
 ; low-level commands
 
@@ -343,6 +364,7 @@
   (sandbox/set-properties!)
   (System/setProperty "jline.terminal" "dumb")
   (let [path "."
+        _  (ensure-dynamic-classloader)
         project (-> (read-project-clj path)
                     leiningen.core.project/init-project)]
     (case cmd
