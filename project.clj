@@ -23,7 +23,7 @@
                  [lein-ring "0.12.5"]
                  [mistakes-were-made "1.8.0"]
                  [net.java.balloontip/balloontip "1.2.4.1"]
-                 [org.clojure/clojure "1.10.0"]
+                 [org.clojure/clojure "1.10.1"]
                  ;[org.clojure/core.incubator "0.1.3"]
                  [org.clojure/tools.cli "0.4.2"]
                  [org.clojure/tools.namespace "0.2.10"]
