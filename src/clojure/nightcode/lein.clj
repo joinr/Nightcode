@@ -1,7 +1,7 @@
 (ns nightcode.lein
   (:require [clojure.java.io :as io]
             [clojure.main]
-            [leiningen.ancient]
+            #_[leiningen.ancient]
             [leiningen.clr]
             [leiningen.core.eval]
             [leiningen.core.main]
@@ -289,7 +289,7 @@
   [path project]
   (leiningen.cljsbuild/cljsbuild project "auto"))
 
-(defn check-versions-in-project-task
+#_(defn check-versions-in-project-task
   [path project]
   (leiningen.ancient/ancient project ":all" ":no-colors"))
 
@@ -374,6 +374,6 @@
       "test" (test-project-task path project)
       "clean" (clean-project-task path project)
       "cljsbuild" (cljsbuild-project-task path project)
-      "check-versions" (check-versions-in-project-task path project)
+      "check-versions" nil #_(check-versions-in-project-task path project)
       nil))
   (System/exit 0))

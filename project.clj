@@ -14,7 +14,7 @@
                  ;;For minimal changes, I'm okay with this.
                  [leiningen  "2.9.1"]
                   ;:exclusions [leiningen.search org.clojure/data.xml]]
-                 [lein-ancient "0.6.15"
+                 #_[lein-ancient "0.6.15"
                   :exclusions [clj-aws-s3]]
                  [lein-cljsbuild "1.1.7"]
                  [lein-clr "0.2.2"]
@@ -45,4 +45,5 @@
   :resource-paths ["resources"]
   :source-paths ["src/clojure"]
   :aot [clojure.main nightcode.core nightcode.lein]
-  :main ^:skip-aot nightcode.Nightcode)
+  ;:main ^:skip-aot nightcode.Nightcode
+  )
