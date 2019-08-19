@@ -18,7 +18,10 @@
                   :exclusions [clj-aws-s3]]
                  [lein-cljsbuild "1.1.7"]
                  [lein-clr "0.2.2"]
-                 [joinr/lein-droid "0.4.7-SNAPSHOT"]
+                 [joinr/lein-droid "0.4.8-SNAPSHOT"
+                  :exclusions [org.apache.httpcomponents/httpmime
+                               org.apache.commons/commons-compress]]
+                 ;:exclusions [org.apache.commons/commons-compress]]
                  [lein-typed "0.4.6"]
                  [lein-ring "0.12.5"]
                  [mistakes-were-made "1.8.0"]
@@ -30,7 +33,9 @@
                  [org.eclipse.jgit "3.5.3.201412180710-r"
                   :exclusions [org.apache.httpcomponents/httpclient]]
                  [org.flatland/ordered "1.5.7"]
-                 [play-clj/lein-template "1.1.1"]
+                 #_[play-clj/lein-template "1.1.1"]
+                 [play-clj/lein-template "1.1.1"
+                  :exclusions [org.apache.commons/commons-compress]]
                  [seesaw "1.5.0"]
                  [cross-parinfer "1.5.0"]
                  [sanersubstance "0.1.0-SNAPSHOT"]
