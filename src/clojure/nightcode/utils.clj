@@ -48,8 +48,8 @@
 (def lang-strings (-> (get lang-files (.getLanguage (Locale/getDefault)))
                       (or (get lang-files "en"))
                       io/resource
-                      .toString
-                      xml/parse-str
+                      io/reader
+                      xml/parse
                       :content))
 
 (defn get-string
