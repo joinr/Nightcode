@@ -49,7 +49,7 @@
                       (or (get lang-files "en"))
                       io/resource
                       .toString
-                      xml/parse
+                      xml/parse-str
                       :content))
 
 (defn get-string
