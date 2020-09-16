@@ -4,7 +4,7 @@
             [clojure.string :as string]
             [clojure.tools.namespace.file :as file]
             [clojure.tools.namespace.parse :as parse]
-            [clojure.xml :as xml])
+            [clojure.data.xml :as xml])
   (:import [java.io File]
            [java.math BigInteger]
            [java.net URL]

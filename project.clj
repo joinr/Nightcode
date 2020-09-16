@@ -1,4 +1,4 @@
-(defproject joinr/nightcode "1.3.4-SNAPSHOT"
+(defproject joinr/nightcode "1.3.5-SNAPSHOT"
   :description "An IDE for Clojure and Java"
   :url "https://github.com/oakes/Nightcode"
   :license {:name "Public Domain"
@@ -44,7 +44,7 @@
                  [commons-codec/commons-codec "1.12"]
                  ;;forgot we added a dependency here
                  [org.clojure/core.async "0.4.490"]
-                 #_[org.clojure/data.xml "0.0.8"]]
+                 [org.clojure/data.xml "0.2.0-alpha6"]]
   :uberjar-exclusions [#"PHPTokenMaker\.class"
                        #"org\/apache\/lucene"]
   :resource-paths ["resources"]
