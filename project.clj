@@ -1,11 +1,11 @@
-(defproject joinr/nightcode "1.3.5-SNAPSHOT"
+(defproject joinr/nightcode "1.3.6-SNAPSHOT"
   :description "An IDE for Clojure and Java"
   :url "https://github.com/oakes/Nightcode"
   :license {:name "Public Domain"
             :url "http://unlicense.org/UNLICENSE"}
   :dependencies [[com.fifesoft/autocomplete "3.0.0"]
                  [com.fifesoft/rsyntaxtextarea "3.0.3"]
-                 [com.github.insubstantial/substance "7.3"]
+                 #_[com.github.insubstantial/substance "7.3"]
                  [compliment "0.3.8"]
                  [gwt-plugin "0.1.6"]
                  [hiccup "1.0.5"]

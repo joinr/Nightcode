@@ -27,7 +27,14 @@
                          edn/read-string)
                      (catch Exception _))))
 
+;;so, EDT gets pissed off if we call this now.  No idea (maybe change
+;;in substance interaction with new JVM, we get null pointer if
+;;this is invoked on EDT).
+;;So to be safe, we wrap it in a future (hah) and deref it.
+;;That way skin creation isn't happening on EDT and substance is
+;;pleased.
 (defn make-skin-map []
+  (deref (future
   {;; light skins
    "autumn"               [(AutumnSkin.)             :light]
    "business"             [(BusinessSkin.)           :light]
@@ -55,7 +62,7 @@
    "graphite-aqua"   [(GraphiteAquaSkin.)   :dark]
    "magellan"        [(MagellanSkin.)       :dark]
    "raven"           [(RavenSkin.)          :dark]
-   "twilight"        [(TwilightSkin.)       :dark]})
+   "twilight"        [(TwilightSkin.)       :dark]})))
 
 (defn abort
   [& msgs]
