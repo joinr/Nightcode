@@ -64,6 +64,12 @@
    "raven"           [(RavenSkin.)          :dark]
    "twilight"        [(TwilightSkin.)       :dark]})))
 
+
+;;ensure these are called outside the EDT, otherwise a weird
+;;null error if try io/resource.
+(def light-theme (io/resource "light.xml"))
+(def dark-theme  (io/resource "dark.xml"))
+
 (defn abort
   [& msgs]
   (binding [*out* *err*]
@@ -125,6 +131,5 @@ Light skin names: %s
                      :shade shade
                      :skin-object skin-obj
                      :theme-resource (or (some-> (:theme-resource opts) io/file)
-                                         (io/resource
-                                           (if (= :light shade)
-                                             "light.xml" "dark.xml"))))))))
+                                         (if (= :light shade)
+                                           light-theme dark-theme)))))))
